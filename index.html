@@ -1,0 +1,1369 @@
+<!doctype html><html lang="pt-BR"><head><meta name="robots" content="noindex, nofollow"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>PayNew sob Choque</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Um painel de caixa fixo no topo (HUD) e a rodada embaixo, numa coluna de 720px. */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --fg:#14231f; --muted:#56655f; --line:#d5ddda;
+  --accent:#1d7a52; --accent-fg:#ffffff; --warn:#94570c; --bad:#b23a3a; --good:#1d7a52;
+  --meter-bg:#e2e8e5; --shadow:rgb(20 35 31 / .28);
+  --parede:#e1e8e4; --chao:#cad4cf; --madeira:#a07b5a; --madeira-esc:#715540; --moldura:#34443f; --metal:#f8faf9;
+  --display:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,"Liberation Mono",monospace;
+  --gl:max(16px,env(safe-area-inset-left,0px)); --gr:max(16px,env(safe-area-inset-right,0px));
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#101715; --surface:#182220; --fg:#e8eeec; --muted:#9fb0aa; --line:#2b3835;
+  --accent:#4fc08a; --accent-fg:#0b1512; --warn:#e0a24a; --bad:#e26a6a; --good:#4fc08a;
+  --meter-bg:#243130; --shadow:rgb(0 0 0 / .6);
+  --parede:#1e2b29; --chao:#152020; --madeira:#7a5a40; --madeira-esc:#523d2c; --moldura:#5a6965; --metal:#d8e0dd; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#101715; --surface:#182220; --fg:#e8eeec; --muted:#9fb0aa; --line:#2b3835;
+  --accent:#4fc08a; --accent-fg:#0b1512; --warn:#e0a24a; --bad:#e26a6a; --good:#4fc08a;
+  --meter-bg:#243130; --shadow:rgb(0 0 0 / .6);
+  --parede:#1e2b29; --chao:#152020; --madeira:#7a5a40; --madeira-esc:#523d2c; --moldura:#5a6965; --metal:#d8e0dd; color-scheme:dark }
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%;accent-color:var(--accent);scrollbar-color:var(--line) var(--bg);scroll-padding-top:240px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--body);
+  padding-left:var(--gl);padding-right:var(--gr);padding-block:0 max(48px,env(safe-area-inset-bottom,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--surface);z-index:10}
+::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--fg)}
+input,textarea{caret-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1:focus,h1:focus-visible{outline:none}
+p{margin:0}
+h1,h2{font-family:var(--display);font-weight:700;line-height:1.05;margin:0;text-wrap:balance;letter-spacing:.005em}
+h1{font-size:clamp(32px,6.4vw,44px)}
+h2{font-size:24px;margin-top:12px}
+.num{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.neg{color:var(--bad)} .pos{color:var(--good)}
+.dica{font-size:15px;color:var(--muted)}
+
+/* ---------- HUD ---------- */
+.hud{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;
+  margin-left:calc(-1 * var(--gl));margin-right:calc(-1 * var(--gr));
+  padding:10px var(--gr) 12px var(--gl);background:var(--surface);border-bottom:1px solid var(--line);
+  box-shadow:0 8px 20px -16px var(--shadow)}
+.hud-in{max-width:720px;margin-inline:auto;display:grid;gap:8px}
+.hud-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.caixa-num{display:flex;align-items:baseline;gap:10px;min-width:0}
+.lbl{font-size:14px;color:var(--muted);line-height:1.3}
+.saldo{font-family:var(--mono);font-weight:500;font-size:clamp(24px,6vw,30px);line-height:1.1;font-variant-numeric:tabular-nums}
+.saldo.neg{color:var(--bad)}
+.hud-mes{text-align:right;min-width:0}
+.hud-mes b{display:block;font-family:var(--display);font-weight:700;font-size:21px;line-height:1.05;white-space:nowrap}
+.hud-mes span{display:block;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45vw}
+.bar{position:relative;height:8px;background:var(--meter-bg);border-radius:4px;overflow:hidden}
+.bar.grande{height:12px;border-radius:6px}
+.bar .fill{position:absolute;top:0;bottom:0;left:0;background:var(--accent);border-radius:inherit;
+  transition:left .5s cubic-bezier(.16,1,.3,1),width .5s cubic-bezier(.16,1,.3,1)}
+.bar .fill.neg{background:var(--bad)}
+.bar .fill.baixa{background:var(--warn)}
+.bar .zero,.bar .tick{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--fg);opacity:.35;z-index:1}
+.bar .zero{left:50%}
+.scale{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 14px}
+.gauge{display:grid;gap:2px;min-width:0}
+.gauge .lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gauge .num{font-size:15px;line-height:1.3}
+.fichas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ficha{min-height:44px;display:grid;align-content:center;gap:1px;padding:5px 6px;text-align:center;
+  background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:8px;font:600 14.5px/1.2 var(--body);cursor:pointer;
+  transition:background-color .15s}
+.ficha:hover:not(:disabled),.ficha[aria-expanded="true"]{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.ficha-s{font-weight:400;font-size:14px;color:var(--muted)}
+.ficha-s .num{font-size:14px;white-space:nowrap}
+.ficha:disabled{cursor:not-allowed}
+.ficha:disabled,.ficha.usado{color:var(--muted);border-color:var(--line)}
+.ficha.usado .ficha-n{text-decoration:line-through;text-decoration-thickness:1.5px}
+.painel{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.painel .regra{font-size:15px;max-width:68ch}
+.aviso{font-size:15px}
+.aviso.recusa{color:var(--warn)}
+
+/* ---------- palco ---------- */
+.wrap{max-width:720px;margin-inline:auto;padding-top:28px}
+#stage{display:grid;gap:18px}
+#stage p,#stage li{max-width:68ch}
+#stage > section:not(.scene){display:grid;gap:10px}
+.meta{color:var(--muted);font-size:15px;margin-top:-10px}
+.lead{font-family:var(--display);font-weight:600;font-size:clamp(22px,4.6vw,28px);line-height:1.15;text-wrap:balance}
+.facts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.facts li{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0;overflow-wrap:anywhere;background:var(--surface)}
+.facts b{display:block;font-family:var(--mono);font-weight:500;font-size:17px;font-variant-numeric:tabular-nums;line-height:1.3}
+.facts span{font-size:15px;color:var(--muted);line-height:1.35;display:block}
+
+/* cena: parede (tingida pelo céu do mês), chão e dois personagens em CSS; o diálogo fica na frente, sobre o chão */
+.scene{--palco:clamp(176px,30vw,200px);--arte-h:calc(var(--palco) - 38px);--sky:#a9cce6;--ceu:color-mix(in oklab,var(--sky) 80%,var(--bg));
+  position:relative;display:grid;align-content:end;min-height:220px;padding:var(--palco) 14px 14px;border-radius:12px;
+  background:var(--chao);overflow:hidden;isolation:isolate}
+/* do começo da manhã (mês 1) à noite (mês 6) */
+.scene[data-mes="2"]{--sky:#9cc6e4} .scene[data-mes="3"]{--sky:#b4cfdc} .scene[data-mes="4"]{--sky:#e3c597}
+.scene[data-mes="5"]{--sky:#d39a86} .scene[data-mes="6"]{--sky:#56628f}
+.scene-art{position:absolute;inset:0 0 auto;height:var(--arte-h);z-index:-1;border-bottom:3px solid var(--madeira-esc);
+  background:linear-gradient(180deg,color-mix(in oklab,var(--sky) 24%,var(--parede)),var(--parede) 75%)}
+.scene-art > div{position:absolute}
+.fundo,.movel,.objeto{display:none}
+.fundo::before,.fundo::after,.movel::before{content:"";position:absolute}
+
+/* personagens */
+.person{bottom:0;height:62%;aspect-ratio:.44;--roupa:var(--accent);--pele:#c99572;--cabelo:#2e2622}
+.voce{left:12%}
+.outro{right:12%;--roupa:#4a5aa8}
+.head{position:absolute;left:28%;top:0;width:44%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(120% 95% at 50% 100%,var(--pele) 64%,var(--cabelo) 65%)}
+.torso{position:absolute;left:6%;right:6%;top:23%;bottom:0;border-radius:46% 46% 3px 3px / 26% 26% 3px 3px;background:var(--roupa)}
+.tag{position:absolute;bottom:calc(100% + 6px);left:50%;translate:-50% 0;white-space:nowrap;padding:0 6px;border-radius:4px;
+  font:500 11px/1.6 var(--mono);letter-spacing:.06em;text-transform:uppercase;background:var(--fg);color:var(--bg)}
+.outro[data-npc="Carla"]{--roupa:#4a5aa8;--pele:#c68e64;--cabelo:#5a3a28}
+.outro[data-npc="Dona Marta"]{--roupa:#b04f78;--pele:#e2b590;--cabelo:#b9b2aa}
+.outro[data-npc="Rafael"]{--roupa:#2f86a6;--pele:#8d5a3b}
+.outro[data-npc="Seu Nilton"]{--roupa:#b0863a;--pele:#d9a77c;--cabelo:#cfc9c1}
+.outro[data-npc="Paulo"]{--roupa:#6f7682;--pele:#a8714a}
+.outro[data-npc="Edson"]{--roupa:#3d5a80;--pele:#6e4630;--cabelo:#1c1714}
+
+/* móveis comuns: mesa (escritório, contador) e balcão (banco, loja) */
+:is([data-cenario="escritorio"],[data-cenario="contador"]) .movel{display:block;left:30%;right:30%;bottom:0;height:34%;
+  background:linear-gradient(var(--madeira) 0 0) 0 0/100% 9px no-repeat,linear-gradient(var(--madeira-esc) 0 0) 7% 0/6px 100% no-repeat,
+  linear-gradient(var(--madeira-esc) 0 0) 93% 0/6px 100% no-repeat}
+:is([data-cenario="banco"],[data-cenario="loja"]) .movel{display:block;left:30%;right:30%;bottom:0;height:36%;border-radius:3px 3px 0 0;
+  background:linear-gradient(var(--madeira) 0 8px,var(--madeira-esc) 8px)}
+
+/* escritório: janela, mesa, maquininha POS */
+[data-cenario="escritorio"] .fundo{display:block;left:31%;top:8%;width:min(18%,120px);height:50%;border:3px solid var(--moldura);border-bottom-width:6px;border-radius:3px;
+  background:linear-gradient(var(--moldura) 0 0) 50% 0/3px 100% no-repeat,linear-gradient(var(--moldura) 0 0) 0 55%/100% 3px no-repeat,
+  linear-gradient(180deg,var(--ceu),color-mix(in oklab,var(--ceu) 55%,var(--parede)))}
+[data-cenario="escritorio"] .objeto{display:block;left:calc(50% - 12px);bottom:34%;width:24px;height:34px;border-radius:4px 4px 2px 2px;
+  background:linear-gradient(var(--accent) 0 0) 50% 5px/16px 9px no-repeat,
+  radial-gradient(circle,var(--moldura) 1.4px,transparent 1.8px) 3px 17px/6px 5px,var(--metal);box-shadow:0 1px 0 var(--moldura)}
+
+/* banco: vidro sobre o balcão, placa "AGÊNCIA" */
+[data-cenario="banco"] .fundo{display:block;left:32%;right:32%;top:24%;bottom:36%;border:2px solid var(--moldura);border-bottom:0;
+  background:linear-gradient(115deg,transparent 38%,rgb(255 255 255 / .4) 39% 45%,transparent 46%),color-mix(in oklab,var(--ceu) 32%,transparent)}
+[data-cenario="banco"] .fundo::before{content:"AGÊNCIA";bottom:calc(100% + 8px);left:50%;translate:-50% 0;padding:3px 8px 3px 12px;border-radius:3px;
+  font:700 15px/1 var(--display);letter-spacing:.24em;background:var(--moldura);color:#f4f7f5}
+
+/* loja: prateleiras com mercadoria, balcão, maquininha de cartão */
+[data-cenario="loja"] .fundo{display:block;left:28%;right:28%;top:7%;height:50%;border-inline:3px solid var(--madeira-esc);
+  --estante:color-mix(in oklab,var(--madeira) 30%,var(--parede));
+  background:repeating-linear-gradient(180deg,var(--estante) 0 6px,transparent 0 calc(33.33% - 3px),var(--madeira-esc) 0 33.33%),
+  repeating-linear-gradient(90deg,transparent 0 4px,#d0814f 0 16px,transparent 0 21px,#4f86b0 0 29px,transparent 0 33px,#e0b84e 0 45px,transparent 0 52px,#7a9a5a 0 60px,transparent 0 64px),
+  var(--estante)}
+[data-cenario="loja"] .objeto{display:block;left:calc(50% - 10px);bottom:36%;width:20px;height:30px;border-radius:4px;
+  background:linear-gradient(#4fc08a 0 0) 50% 4px/14px 8px no-repeat,radial-gradient(circle,#cfd8d4 1.3px,transparent 1.7px) 2px 15px/5px 4.5px,#2b3236}
+[data-cenario="loja"] .objeto::before{content:"";position:absolute;left:4px;right:4px;bottom:100%;height:7px;background:#fbfbf8;border-radius:1px 1px 0 0}
+
+/* telefone: a chamada ocupa a cena; o interlocutor é o avatar */
+[data-cenario="telefone"]{--fone:max(124px,calc(var(--arte-h) * .66));--fone-h:calc(var(--arte-h) * .93)}
+[data-cenario="telefone"] .fundo{display:block;right:10%;bottom:4%;height:var(--fone-h);width:var(--fone);border:4px solid var(--moldura);border-radius:16px;
+  background:linear-gradient(180deg,#1b3a30,#0d1a16)}
+[data-cenario="telefone"] .fundo::before{content:"Chamada · 04:12";top:7px;left:0;right:0;text-align:center;white-space:nowrap;font:500 10.5px/1.4 var(--mono);color:#cfe9dc}
+[data-cenario="telefone"] .fundo::after{bottom:7px;left:50%;translate:-50% 0;width:24px;height:10px;border-radius:999px;background:#d0533f}
+[data-cenario="telefone"] .outro{right:calc(10% + var(--fone) / 2);translate:50% 0;bottom:calc(4% + 44px);height:calc(var(--fone-h) - 74px)}
+[data-cenario="telefone"] .outro .tag{bottom:auto;top:calc(100% + 4px)}
+[data-cenario="telefone"] .objeto{display:block;left:calc(12% + var(--arte-h) * .2);bottom:50%;width:6px;height:13%;border-radius:2px;background:var(--moldura)}
+
+/* contador: arquivo de pastas na parede, mesa com pastas e calculadora */
+[data-cenario="contador"] .fundo{display:block;left:31%;right:31%;top:14%;height:24%;
+  background:linear-gradient(var(--madeira-esc) 0 0) 0 100%/100% 4px no-repeat,
+  repeating-linear-gradient(90deg,#3c6e9c 0 9px,transparent 0 11px,#b8923a 0 19px,transparent 0 21px,#5a7d4a 0 28px,transparent 0 30px,#9c4a4a 0 37px,transparent 0 40px) 0 0/100% calc(100% - 4px) no-repeat}
+[data-cenario="contador"] .movel::before{left:8%;bottom:100%;width:34%;height:14px;border-radius:2px 2px 0 0;
+  background:linear-gradient(#e2c26e 0 3px,#a8862e 0 4px,#3c6e9c 0 7px,#2a5277 0 8px,#e2c26e 0 11px,#a8862e 0 12px,#b03c3c 0)}
+[data-cenario="contador"] .objeto{display:block;right:36%;bottom:34%;width:22px;height:28px;border-radius:3px;
+  background:linear-gradient(#b9d3a8 0 0) 50% 4px/16px 6px no-repeat,linear-gradient(var(--moldura) 0 0) 3px 13px/16px 12px no-repeat,var(--metal);
+  box-shadow:0 1px 0 var(--moldura)}
+
+.dialog{position:relative;display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;
+  box-shadow:0 10px 28px -14px var(--shadow)}
+.npc{justify-self:start;margin:-32px 0 0 -2px;display:flex;column-gap:8px;align-items:baseline;flex-wrap:wrap;
+  background:var(--fg);color:var(--bg);border-radius:6px;padding:3px 10px}
+.npc-nome{font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:.02em;line-height:1.2}
+.npc-papel{font-size:13.5px;opacity:.85}
+.fala{font-size:16.5px;line-height:1.6}
+/* troca de fase: o cenário acende, o diálogo sobe e a fala se revela linha a linha (máscara vertical, nunca corta palavra) */
+.entra .scene-art{animation:acende .3s ease-out both}
+.entra .dialog{animation:chega .7s cubic-bezier(.16,1,.3,1) both}
+.entra .fala{mask-image:linear-gradient(#000 45%,transparent 55%);mask-size:100% 260%;mask-repeat:no-repeat;
+  animation:diz 1.1s cubic-bezier(.25,.7,.3,1) .1s both}
+@keyframes acende{from{opacity:0}}
+@keyframes chega{from{opacity:.35;transform:translateY(12px)}}
+@keyframes diz{from{mask-position:0 100%}to{mask-position:0 0}}
+
+/* opções */
+.opts{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.opt{display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;width:100%;min-height:44px;text-align:left;
+  background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:14px;font:inherit;cursor:pointer;
+  transition:border-color .15s,background-color .15s,box-shadow .15s}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--surface))}
+.opt:disabled{cursor:not-allowed;background:transparent;color:var(--muted);border-style:dashed}
+.letter{font-family:var(--display);font-weight:700;font-size:26px;line-height:1;color:var(--accent)}
+.opt:disabled .letter{color:var(--muted)}
+.opt-t{display:block;font-weight:500;line-height:1.35}
+.opt-s{display:block;color:var(--muted);font-size:15px;margin-top:4px}
+.opt:disabled .opt-s{color:inherit}
+.extra{display:inline-block;margin-top:8px;font-family:var(--mono);font-weight:500;font-size:14px;color:var(--warn);border:1px solid currentColor;border-radius:999px;padding:2px 9px}
+.marcada{display:block;margin-top:8px;font-size:14px;font-weight:600;color:var(--accent)}
+.bloqueio{color:var(--warn);font-size:15px;margin:6px 0 0 56px}
+
+/* campos */
+label{font-weight:600}
+textarea,input[type="text"]{width:100%;min-height:44px;font:inherit;font-size:16px;color:var(--fg);background:var(--bg);
+  border:1px solid var(--line);border-radius:8px;padding:10px 12px;resize:vertical}
+textarea:focus,input[type="text"]:focus{border-color:var(--accent)}
+::placeholder{color:var(--muted);opacity:1}
+.campo{display:grid;gap:6px}
+.porque{display:grid;gap:8px;padding:16px;border:1px solid var(--accent);border-radius:10px;background:var(--surface)}
+.btn{justify-self:start;min-height:44px;background:var(--accent);color:var(--accent-fg);border:1px solid var(--accent);border-radius:8px;
+  padding:10px 18px;font:600 16px var(--body);cursor:pointer;transition:background-color .15s}
+.btn:not(.ghost):hover:not(:disabled):not([aria-disabled="true"]){background:color-mix(in srgb,var(--accent) 86%,var(--fg))}
+.btn:focus-visible{outline-color:var(--fg)}
+.btn:disabled,.btn[aria-disabled="true"]{background:var(--meter-bg);border-color:var(--line);color:var(--muted);cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.ghost:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.acoes{display:flex;flex-wrap:wrap;gap:10px}
+
+/* consequência */
+.escolha-feita{display:grid;gap:6px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.escolha-feita .letter{font-size:22px;margin-right:8px}
+.seu-porque{color:var(--muted);font-size:15px}
+.fechamento,.previsao{display:grid;gap:6px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:15px}
+.itens{margin:0;padding-left:20px;display:grid;gap:2px}
+.alerta{color:var(--warn)}
+.deltas{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.deltas li{font-size:15px}
+.deltas .num{font-size:15px}
+.efeitos{margin:10px 0 0;padding-left:20px;display:grid;gap:4px}
+.lesson{padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:15px}
+.lesson-k{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.03em;color:var(--fg);margin-right:8px}
+
+/* epílogo */
+.veredito{font-size:17px}
+.finais{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.finais li{display:grid;gap:5px}
+.finais-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.linha{list-style:none;margin:0;padding:0}
+.linha li{display:grid;grid-template-columns:auto auto 1fr auto;gap:2px 10px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)}
+.linha li:last-child{border-bottom:0}
+.quando{font-size:15px;color:var(--muted);white-space:nowrap}
+.marca{font-family:var(--display);font-weight:700;font-size:19px;color:var(--accent)}
+.recurso_recusado .marca{color:var(--warn)}
+.dc{grid-column:4;text-align:right;font-size:15px;white-space:nowrap}
+.dc .lbl{margin-right:4px}
+.oque{grid-column:1 / -1;display:grid;gap:2px}
+.oque .p{color:var(--muted);font-size:15px}
+.deb{margin:0;padding-left:22px;display:grid;gap:8px}
+.aval{display:grid;gap:14px}
+.escala{border:0;margin:0;padding:0;display:grid;gap:8px}
+.escala legend{padding:0;margin-bottom:8px;font-weight:600}
+.notas{display:flex;flex-wrap:wrap;gap:8px}
+.nota{position:relative;display:grid;place-items:center;min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:8px;
+  font-family:var(--mono);font-weight:500;cursor:pointer;background:var(--surface)}
+.nota input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}
+.nota:hover{border-color:var(--accent)}
+.nota:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.nota:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.rodape{margin-top:32px;font-size:15px;color:var(--muted)}
+
+@media (prefers-reduced-motion:reduce){
+  .bar .fill,.opt,.btn,.ficha{transition:none}
+  .entra .dialog,.entra .scene-art,.entra .fala{animation:none}
+}
+</style>
+
+<header id="hud" class="hud" hidden>
+  <div class="hud-in">
+    <div class="hud-top">
+      <div class="caixa-num"><span class="lbl">Caixa</span><span id="saldo" class="saldo">R$ 0</span></div>
+      <div class="hud-mes"><b id="hudMes"></b><span id="hudSessao"></span></div>
+    </div>
+    <div id="barCaixa" class="bar grande" role="meter" aria-label="Caixa" aria-valuemin="-15000" aria-valuemax="15000"><span class="zero"></span><span class="fill"></span></div>
+    <div class="scale" aria-hidden="true"><span>−R$ 15 mil, bloqueio</span><span>0</span><span>+R$ 15 mil</span></div>
+    <div class="gauges">
+      <div class="gauge"><span class="lbl">Reputação</span><span class="num" data-val="rep"></span>
+        <div id="barRep" class="bar" role="meter" aria-label="Reputação" aria-valuemin="0" aria-valuemax="100"><span class="tick" style="left:50%"></span><span class="fill"></span></div></div>
+      <div class="gauge"><span class="lbl">Lojistas</span><span class="num" data-val="lojistas"></span>
+        <div id="barLoj" class="bar" role="meter" aria-label="Lojistas" aria-valuemin="300" aria-valuemax="450"><span class="fill"></span></div></div>
+      <div class="gauge"><span class="lbl">Volume PayTime</span><span class="num" data-val="tpvPaytime"></span>
+        <div id="barTpv" class="bar" role="meter" aria-label="Volume PayTime por mês" aria-valuemin="0" aria-valuemax="2000000"><span class="fill"></span></div></div>
+    </div>
+    <div id="fichas" class="fichas" role="group" aria-label="Recursos de emergência, cada um pode ser usado uma vez"></div>
+    <div id="fichaPainel" class="painel" hidden></div>
+    <p id="fichaAviso" class="aviso" role="status" hidden></p>
+  </div>
+</header>
+
+<div class="wrap">
+  <main id="stage"></main>
+  <footer class="rodape"><p id="storageStatus" role="status"></p></footer>
+</div>
+
+<script>
+// PREMISSAS DECLARADAS NO RELATÓRIO
+// margemSeg: 0,264% (margem líquida do canal SEG sobre o volume vendido)
+// margemPaytime: 0,495% (margem líquida do canal PayTime sobre o volume vendido)
+// ticketMedio: R$ 15.000 de volume mensal por lojista
+// carros: R$ 9.881 por mês (4 carros financiados)
+// folha: R$ 8.000 por mês; fixos: R$ 1.500 por mês; comissaoPct: 8%
+// folha = R$ 2.000 (salário conhecido) + 3 × R$ 2.000 (mesmo salário para os demais CLT, pagos por outra conta, contados como gasto); demais colaboradores remunerados por comissão, incluída nos 8% da receita; fixos = R$ 1.500 (premissa); nenhuma receita além do MDR (premissa)
+//
+// Todos os nomes de pessoas abaixo são fictícios.
+// Efeitos: caixa é pontual; receitaMensal, carrosMensal e folhaMensal são recorrentes;
+// pendente = efeito pontual que só acontece no mês indicado;
+// compromisso = parcela fixa paga por N meses seguintes.
+
+const CONTENT = {
+  PREMISSAS: { margemSeg: 0.00264, margemPaytime: 0.00495, ticketMedio: 15000, carros: 9881, folha: 8000, fixos: 1500, comissaoPct: 0.08 },
+
+  START: { caixa: 2500, rep: 60, lojistas: 400, lojistasPaytime: 70, tpvPaytime: 1000000, mes: 0 },
+
+  RESOURCES: {
+    cartao: { valor: 10000, jurosMes: 0.08, label: "Cartão da empresa" },
+    aporte: { valor: 7000, label: "Aporte de terceiro" },
+    prazo: { custo: 120, repMin: 50, label: "Pedir prazo ao banco" }
+  },
+
+  PROLOGO: {
+    titulo: "Você é o dono. O caixa é pequeno.",
+    paragrafos: [
+      "Você é dono de uma subadquirente: uma empresa pequena que aluga e cuida de maquininhas de cartão para cerca de 400 lojistas. Sua receita vem da taxa (o MDR) que fica com você sobre cada venda passada na máquina.",
+      "O dinheiro entra e sai em datas diferentes. A receita é de uns R$ 18 mil por mês, mas quatro carros financiados, a folha e os custos fixos cobram em dia certo. O caixa já começa apertado: com os carros, a folha e os custos fixos, todo mês fecha um pouco no vermelho, a menos que algo mude.",
+      "Nos próximos seis meses, um choque por mês vai bater na sua porta. Você decide, vê a consequência e segue em frente. Não existe resposta única: cada escolha troca um problema por outro, e o caixa paga a diferença."
+    ],
+    fatos: [
+      ["~R$ 18 mil/mês", "receita de MDR"],
+      ["~R$ 9,9 mil/mês", "4 carros financiados"],
+      ["R$ 2.500", "caixa inicial"],
+      ["~400", "lojistas ativos"]
+    ]
+  },
+
+  ROUNDS: [
+    // ---------------------------------------------------------------- MÊS 1
+    {
+      id: "m1-liquidez", mes: 1, natureza: "Choque financeiro · liquidez", cenario: "banco",
+      npc: { nome: "Carla", papel: "gerente do banco" },
+      titulo: "A comissão atrasou e as parcelas dos carros vencem",
+      fala: "Aqui é a Carla, do banco. As parcelas dos quatro carros vencem entre os dias 5 e 10 e somam R$ 9,9 mil. Vi que a comissão do canal SEG, que costuma cair no começo do mês, só chega dia 16. Sua conta tem R$ 2.500 hoje. Eu consigo ajudar. O que você pretende fazer com essas parcelas?",
+      fatos: [
+        ["R$ 12.900", "comissão SEG, agora só dia 16"],
+        ["R$ 9,9 mil", "4 parcelas de carro até dia 10"],
+        ["R$ 2.500", "saldo hoje"],
+        ["2 fornecedores", "pediram antecipação de prazo"]
+      ],
+      opcoes: [
+        {
+          letra: "A", titulo: "Pagar a parcela maior e deixar as outras três atrasarem até dia 16",
+          sub: "Multa e juros de uns R$ 180. O nome da empresa fica marcado no banco.",
+          receitaTexto: 0,
+          efeitos: { caixa: -180, rep: -20, flags: ["atrasou"] },
+          consequencia: {
+            cena: "Duas semanas depois, a comissão cai no dia 16 e você quita o atraso. A Carla é educada, mas avisa que os três contratos agora constam como pagos com atraso no sistema do banco.",
+            efeitosTexto: ["Multa e juros: cerca de R$ 180", "Atraso registrado nos 3 contratos", "Reputação com o banco cai e pesa nas próximas negociações"],
+            conceito: "O custo visível foi pequeno; o invisível, a confiança de quem empresta, é maior e aparece quando você precisar negociar de novo."
+          }
+        },
+        {
+          letra: "B", titulo: "Pegar R$ 10.000 no cartão da empresa, como em janeiro",
+          sub: "Custo de uns 8% ao mês. Paga tudo em dia.",
+          receitaTexto: 0,
+          efeitos: { usaRecurso: "cartao" },
+          consequencia: {
+            cena: "Duas semanas depois, as quatro parcelas estão pagas em dia e ninguém ligou do banco. A fatura do cartão, porém, chega com o saldo rodando a 8% ao mês, e boa parte da comissão que entrou no dia 16 vai para cobrir isso.",
+            efeitosTexto: ["Todas as parcelas pagas em dia", "Juros de cerca de R$ 800 por mês enquanto a dívida existir", "A dívida cresce e o problema volta maior no mês seguinte"],
+            conceito: "Finanças Comportamentais: o alívio de hoje esconde o custo total. Juros de 8% ao mês passam de 150% ao ano."
+          }
+        },
+        {
+          letra: "C", titulo: "Pedir um aporte de R$ 7.000 a um terceiro, sem juros",
+          sub: "Já foi feito em janeiro e fevereiro. Compromisso informal de devolver.",
+          receitaTexto: 0,
+          efeitos: { usaRecurso: "aporte" },
+          consequencia: {
+            cena: "Duas semanas depois, o dinheiro entrou no mesmo dia e as parcelas foram pagas sem custo. Só que quem aportou comenta, de passagem, que gostaria de ver uma data para a devolução.",
+            efeitosTexto: ["Parcelas pagas, sem juros", "Já são R$ 19 mil em aportes nos últimos 4 meses", "Devolução sem data: uma dívida que não aparece em lugar nenhum"],
+            conceito: "Zero juros não é zero custo. Dívida informal não entra nos números da empresa, mas entra na relação com quem emprestou."
+          }
+        },
+        {
+          letra: "D", titulo: "Ligar hoje para o banco e pedir prorrogação de 15 dias das parcelas",
+          sub: "Cobra uma pequena taxa. As parcelas só mudam de data.",
+          receitaTexto: 0,
+          efeitos: { caixa: -120, rep: 5, usaRecurso: "prazo" },
+          requer: { repMin: 50 },
+          bloqueioTexto: "O banco só prorroga para quem tem boa reputação, e a sua está baixa demais.",
+          consequencia: {
+            cena: "Duas semanas depois, o banco aceitou prorrogar as parcelas por uma taxa de R$ 120 e o caixa ficou positivo o mês todo. A Carla lembra que a prorrogação é só um adiamento: o valor continua devido.",
+            efeitosTexto: ["Parcelas prorrogadas por taxa de R$ 120", "Caixa positivo durante todo o mês", "As parcelas prorrogadas caem juntas no mês seguinte, somadas às parcelas normais", "Abre caminho para renegociar os carros mais adiante"],
+            conceito: "Derivativos, Opções: negociar antes de precisar é comprar o direito de não pagar hoje. Custa pouco, mas só adia o problema: o valor volta no mês seguinte."
+          }
+        }
+      ]
+    },
+
+    // ---------------------------------------------------------------- MÊS 2
+    {
+      id: "m2-comercial", mes: 2, natureza: "Choque comercial · demanda", cenario: "loja",
+      npc: { nome: "Dona Marta", papel: "lojista, uma das 10 maiores clientes" },
+      titulo: "Um concorrente oferece taxa menor e 40 lojistas ameaçam migrar",
+      fala: "Eu gosto de vocês, mas fui visitada por uma credenciadora nova. A taxa deles é 0,3 ponto abaixo da sua. Conversei com os colegas aqui da região e uns quarenta de nós estão pensando em trocar de máquina. Eu vendo muito e preciso receber rápido. Me diga o que você pode fazer por mim.",
+      fatos: [
+        ["R$ 1.580/mês", "receita em risco (0,264% × R$ 600 mil)"],
+        ["10 lojistas", "concentram 60% desse volume"],
+        ["D+1 vs D+30", "vantagem do canal PayTime no prazo"],
+        ["0,3 p.p.", "diferença de taxa do concorrente"]
+      ],
+      opcoes: [
+        {
+          letra: "A", titulo: "Igualar a taxa do concorrente para os 40",
+          sub: "Mantém o volume, perde margem.",
+          receitaTexto: -1800,
+          efeitos: { receitaMensal: -1800, flags: ["descontou40"] },
+          consequencia: {
+            cena: "Duas semanas depois, os 40 ficaram e Dona Marta agradece. Mas a notícia do desconto circulou: outros lojistas ligam perguntando por que não têm a mesma taxa.",
+            efeitosTexto: ["Volume mantido", "Margem desses 40 cai R$ 1.800 por mês, todo mês", "Os outros 360 vão descobrir e pedir o mesmo"],
+            conceito: "Ancoragem: a taxa do concorrente virou a referência. Em vendas, desconto sem contrapartida vira o novo normal."
+          }
+        },
+        {
+          letra: "B", titulo: "Segurar só os 10 maiores, migrando para o PayTime (D+1), e deixar os outros 30 irem",
+          sub: "Foco onde está o volume.",
+          receitaTexto: 200,
+          efeitos: { receitaMensal: -400, lojistas: -30, tpvPaytime: 360000, flags: ["segurouTop10"] },
+          consequencia: {
+            cena: "Duas semanas depois, os 10 maiores estão no PayTime e recebem no dia seguinte. Dona Marta diz que o prazo vale mais do que a diferença de taxa. Os outros 30 foram embora sem muito barulho.",
+            efeitosTexto: ["Perde R$ 240 mil de volume (cerca de R$ 630 por mês)", "Os 10 maiores passam a render mais no canal PayTime", "Saldo final: cerca de +R$ 200 por mês"],
+            conceito: "Fundamentos de Vendas: separar os clientes por valor e defender os maiores com benefício (prazo), não com preço."
+          }
+        },
+        {
+          letra: "C", titulo: "Deixar os 40 irem e usar o tempo comercial para reativar o PayTime",
+          sub: "Recuperar clientes parados do canal PayTime leva tempo: o volume volta no fechamento do mês 5.",
+          receitaTexto: -1580,
+          efeitos: { receitaMensal: 0, lojistas: -40, pendente: { mes: 5, tpvPaytime: 550000, descricao: "Clientes PayTime reativados: o volume volta" }, flags: ["reativaPaytime"] },
+          consequencia: {
+            cena: "Duas semanas depois, os 40 trocaram de máquina e a receita já aparece menor. O seu tempo agora vai para ligar para antigos clientes do PayTime. Os retornos são lentos: o volume dos antigos clientes só volta no fechamento do mês 5.",
+            efeitosTexto: ["−R$ 1.580 por mês logo de cara", "O volume PayTime volta no fechamento do mês 5: +R$ 550 mil de volume", "Até lá, a receita perdida não volta"],
+            conceito: "Opções: abrir mão de um ganho imediato por um ganho maior, porém mais lento. O custo é esperar, e o caixa precisa aguentar a espera."
+          }
+        },
+        {
+          letra: "D", titulo: "Dar um desconto menor, de 0,075 ponto, para toda a base antes que mais gente ameace",
+          sub: "Reação ao medo de perder.",
+          receitaTexto: -4500,
+          efeitos: { receitaMensal: -4500, flags: ["taxaBaseToda"] },
+          consequencia: {
+            cena: "Duas semanas depois, o comunicado de redução saiu para todos e as ameaças pararam. Mas a conta do mês seguinte mostra uma margem bem menor, e nenhum lojista que nunca pensou em sair agradeceu.",
+            efeitosTexto: ["−R$ 4.500 por mês de margem na base inteira (400 lojistas × R$ 15 mil × 0,075%)", "Os 40 provavelmente ficam", "O caixa volta a ficar apertado em poucos meses"],
+            conceito: "Aversão à perda e efeito manada: a ameaça de 10% da base virou desconto para 100%."
+          }
+        }
+      ]
+    },
+
+    // ---------------------------------------------------------------- MÊS 3
+    {
+      id: "m3-contrato", mes: 3, natureza: "Choque de contrato · credenciadora", cenario: "telefone",
+      npc: { nome: "Rafael", papel: "representante da credenciadora" },
+      titulo: "A credenciadora renova o contrato e muda as regras",
+      fala: "Rafael aqui. Vamos renovar o contrato do canal PayTime e tenho duas formas: royalties de 30% sobre a sua margem nesse canal, ou uma meta de 1,5 milhão de reais de volume por mês durante 12 meses, com multa se não bater. Se houver atraso registrado nos seus contratos, eu peço uma garantia. Como quer seguir?",
+      fatos: [
+        ["R$ 1 mi/mês", "volume atual no PayTime"],
+        ["R$ 1,5 mi/mês", "meta proposta por 12 meses"],
+        ["30%", "royalties sobre a margem PayTime"],
+        ["R$ 3.000", "multa se a carteira PayTime não crescer"]
+      ],
+      opcoes: [
+        {
+          letra: "A", titulo: "Aceitar os royalties de 30%",
+          sub: "Sem meta e sem multa, mas você fica com uma fatia menor.",
+          receitaTexto: -1500,
+          efeitos: { receitaMensal: -1500 },
+          consequencia: {
+            cena: "Duas semanas depois, o contrato é assinado sem discussão sobre volume. No primeiro extrato, você vê a parte da credenciadora saindo antes de a margem chegar à sua conta.",
+            efeitosTexto: ["Royalties de 30% sobre a margem PayTime", "−R$ 1.500 por mês na receita (30% de cerca de R$ 4.950 de comissão PayTime)", "Nenhuma meta, nenhuma multa"],
+            conceito: "Contratos: pagar um custo fixo conhecido para eliminar uma obrigação futura. Previsível, mas definitivo."
+          }
+        },
+        {
+          letra: "B", titulo: "Aceitar a meta de R$ 1,5 milhão por mês durante 12 meses",
+          sub: "Melhora a margem. Se houver atraso nos contratos, pedem garantia de R$ 2.000. Se a carteira PayTime não tiver crescido (lojistas segurados ou reativação), a credenciadora cobra multa de R$ 3.000.",
+          receitaTexto: 400,
+          efeitos: { receitaMensal: 400, flags: ["metaPaytime"] },
+          garantiaSeAtrasou: 2000,
+          consequencia: {
+            cena: "Duas semanas depois, o contrato está assinado e a margem do PayTime subiu um pouco. A meta de 1,5 milhão passou a ser o primeiro número que você confere toda segunda-feira.",
+            efeitosTexto: ["+R$ 400 por mês na receita", "Garantia de R$ 2.000 apenas se houver atraso registrado", "Se a carteira PayTime não tiver crescido (lojistas segurados ou reativação), a credenciadora cobra multa de R$ 3.000 no mês 6"],
+            conceito: "Derivativos, Contratos: assumir uma obrigação futura em troca de um benefício agora. Funciona se você tiver como cumprir."
+          }
+        },
+        {
+          letra: "C", titulo: "Negociar uma meta menor em 90 dias",
+          sub: "Pede tempo e abre mão de parte do ganho.",
+          receitaTexto: -200,
+          efeitos: { caixa: -300, receitaMensal: -200, rep: 5 },
+          consequencia: {
+            cena: "Duas semanas depois, Rafael topa conversar e pede os números dos últimos meses. A negociação leva tempo e custa uma taxa de análise, e você sai com uma meta mais leve e uma margem menor.",
+            efeitosTexto: ["−R$ 300 de taxa de análise", "−R$ 200 por mês na receita", "Relação com a credenciadora mais próxima"],
+            conceito: "Opções: pagar um pequeno prêmio para manter a flexibilidade enquanto o cenário se esclarece."
+          }
+        },
+        {
+          letra: "D", titulo: "Migrar parte do volume para outra credenciadora",
+          sub: "Reduz a dependência, mas custa a mudança.",
+          receitaTexto: -1200,
+          efeitos: { caixa: -1500, receitaMensal: 300, tpvPaytime: -300000, rep: -5 },
+          consequencia: {
+            cena: "Duas semanas depois, parte dos lojistas já passa as vendas pela outra credenciadora. A migração deu trabalho, e Rafael deixou claro que não gostou de saber disso por terceiros.",
+            efeitosTexto: ["−R$ 1.500 de custo de migração", "O volume migrado rende menos: cerca de −R$ 1.200/mês", "R$ 300 mil a menos de volume no PayTime"],
+            conceito: "Diversificação: não depender de um único fornecedor reduz o risco, mas tem custo de implantação e de relacionamento."
+          }
+        }
+      ]
+    },
+
+    // ---------------------------------------------------------------- MÊS 4
+    {
+      id: "m4-cambio", mes: 4, natureza: "Choque de câmbio · custo dos terminais", cenario: "telefone",
+      npc: { nome: "Seu Nilton", papel: "fornecedor de terminais" },
+      titulo: "O dólar subiu e a maquininha vai ficar 15% mais cara",
+      fala: "Seu Nilton falando. Com o dólar em alta, o terminal passa de R$ 400 para R$ 460 no mês que vem. Pelo que você vende, vai precisar de uns 30 nos próximos três meses. Posso segurar o preço antigo se você comprar tudo agora, ou fechar contrato de R$ 420 fixos por seis meses, mínimo de dez por mês. Me diz o que prefere.",
+      fatos: [
+        ["R$ 60", "aumento por terminal"],
+        ["30", "terminais nos próximos 3 meses"],
+        ["R$ 1.800", "custo extra se comprar ao preço novo"],
+        ["R$ 420", "preço fixo oferecido por 6 meses"]
+      ],
+      opcoes: [
+        {
+          letra: "A", titulo: "Comprar os 30 agora, à vista, ao preço antigo (R$ 12.000)",
+          sub: "Economiza R$ 1.800, mas tira R$ 12 mil do caixa hoje.",
+          receitaTexto: 0,
+          efeitos: { caixa: -12000, flags: ["estocou"] },
+          consequencia: {
+            cena: "Duas semanas depois, a prateleira do escritório está cheia de caixas de terminais. O preço novo entrou em vigor e você está protegido do aumento. Mas o saldo no banco diminuiu de uma vez.",
+            efeitosTexto: ["Caixa cai R$ 12.000 de uma vez", "Economia de R$ 1.800 se o dólar ficar alto", "Se a venda desacelerar, o estoque fica parado"],
+            conceito: "Investimentos Internacionais: o câmbio afeta quem importa. Estocar protege do preço, mas concentra o risco no caixa."
+          }
+        },
+        {
+          letra: "B", titulo: "Fechar contrato a R$ 420 fixos por 6 meses, mínimo de 10 por mês",
+          sub: "Trava o preço, assume compromisso.",
+          receitaTexto: 0,
+          efeitos: { caixa: -4200, compromisso: { meses: 2, valor: 4200 }, flags: ["contratoFixo"] },
+          consequencia: {
+            cena: "Duas semanas depois, o primeiro lote chegou ao preço combinado e o seu custo mensal ficou previsível. Você olha o dólar todo dia, torcendo para ele não cair muito.",
+            efeitosTexto: ["Paga R$ 4.200 por mês, previsível, nos próximos 2 meses", "Economia de R$ 400 por mês se o dólar subir", "Se o dólar cair, você paga mais que o mercado"],
+            conceito: "Derivativos, Contratos: fixar uma condição troca incerteza por compromisso. Protege de um lado e expõe do outro."
+          }
+        },
+        {
+          letra: "C", titulo: "Comprar mês a mês ao preço do dia",
+          sub: "Flexibilidade total, custo desconhecido.",
+          receitaTexto: 0,
+          efeitos: { caixa: -4600, compromisso: { meses: 2, valor: 4600 } },
+          consequencia: {
+            cena: "Duas semanas depois, o primeiro lote veio ao preço novo e você ainda não sabe quanto vai pagar no mês que vem. Seu Nilton avisa que quem tem contrato tem prioridade na fila de entrega.",
+            efeitosTexto: ["Nenhum compromisso de prazo", "Até R$ 1.800 a mais nos 3 meses se o dólar continuar alto", "Risco de atraso na entrega se o fornecedor priorizar quem tem contrato"],
+            conceito: "Opções: manter as alternativas abertas tem preço. Vale quando a incerteza é grande."
+          }
+        },
+        {
+          letra: "D", titulo: "Comprar ao preço novo e repassar R$ 5 na mensalidade dos lojistas",
+          sub: "Transfere o custo para a base.",
+          receitaTexto: 400,
+          efeitos: { caixa: -4600, receitaMensal: 1980, lojistas: -40, compromisso: { meses: 2, valor: 4600 }, flags: ["repassou"] },
+          consequencia: {
+            cena: "Duas semanas depois, o aviso de reajuste de R$ 5 chega aos lojistas. Alguns reclamam do aumento logo depois de um concorrente mais barato ter aparecido, e uma parte cancela.",
+            efeitosTexto: ["+R$ 1.980 de mensalidade, menos o MDR dos 40 lojistas que saem: cerca de +R$ 400/mês líquidos", "Cerca de 40 lojistas cancelam: o repasse veio logo depois de um concorrente mais barato", "Os mesmos terminais ainda custam R$ 4.600 por mês nos 2 meses seguintes", "O ganho some se o cancelamento for maior"],
+            conceito: "Fundamentos de Vendas: repassar custo num momento de pressão competitiva é uma aposta sobre quem absorve o choque, você ou o cliente."
+          }
+        }
+      ]
+    },
+
+    // ---------------------------------------------------------------- MÊS 5
+    {
+      id: "m5-fiscal", mes: 5, natureza: "Choque fiscal · pessoas", cenario: "contador",
+      npc: { nome: "Paulo", papel: "contador" },
+      titulo: "O ISS atrasou e a prefeitura mandou notificação",
+      fala: "Paulo, o contador, falando. Chegou notificação da prefeitura: o ISS está atrasado em R$ 3.200 e há 15 dias para responder. Dá para parcelar, com entrada de R$ 500. E tem outro assunto: a Ana, do atendimento, me contou que a equipe está preocupada com corte. Se a empresa precisa economizar, é melhor decidir isso com clareza.",
+      fatos: [
+        ["R$ 3.200", "ISS em atraso, com notificação"],
+        ["R$ 500", "entrada para parcelar o ISS"],
+        ["15 dias", "prazo para responder à prefeitura"],
+        ["R$ 8.000/mês", "folha de pagamento hoje"]
+      ],
+      opcoes: [
+        {
+          letra: "A", titulo: "Parcelar o ISS e cortar 1 pessoa da equipe",
+          sub: "Alivia a folha, mas a equipe fica menor e mais assustada.",
+          receitaTexto: 0,
+          efeitos: { caixa: -500, folhaMensal: -2000, rep: -10, flags: ["cortou"] },
+          consequencia: {
+            cena: "Duas semanas depois, o ISS está parcelado e uma pessoa foi desligada. A Ana, que ficou, assume parte das tarefas, mas o clima no escritório mudou e dois lojistas comentam que o atendimento está mais lento.",
+            efeitosTexto: ["−R$ 500 de entrada do parcelamento", "Folha cai R$ 2.000 por mês", "A reputação da empresa sofre com o corte"],
+            conceito: "Custos fixos e pessoas: cortar economiza todo mês, mas tem custo invisível em atendimento, clima e confiança."
+          }
+        },
+        {
+          letra: "B", titulo: "Parcelar o ISS e renegociar os carros de 36 para 60 parcelas",
+          sub: "Reduz a parcela mensal, mas alonga a dívida. Exige o banco sem atraso registrado.",
+          receitaTexto: 0,
+          efeitos: { caixa: -500, carrosMensal: -4000 },
+          requer: { semFlag: "atrasou" },
+          bloqueioTexto: "O banco recusou: há atraso registrado nos contratos.",
+          consequencia: {
+            cena: "Duas semanas depois, o banco aceita alongar os contratos. A parcela mensal cai e o caixa respira, mas Paulo lembra que você vai pagar os carros por mais dois anos.",
+            efeitosTexto: ["−R$ 500 de entrada do parcelamento", "Parcela dos carros cai R$ 4.000 por mês", "A dívida dura mais tempo e o custo total sobe"],
+            conceito: "Prazo e custo: alongar a dívida alivia o mês, mas o total pago ao final é maior."
+          }
+        },
+        {
+          letra: "C", titulo: "Ignorar a notificação por enquanto",
+          sub: "Não gasta agora. Pode custar mais depois.",
+          receitaTexto: 0,
+          efeitos: { rep: -10, pendente: { mes: 6, caixa: -1300, descricao: "ISS ignorado: multa, juros e honorários" }, flags: ["ignorouIss"] },
+          consequencia: {
+            cena: "Duas semanas depois, o prazo da prefeitura passou em silêncio. O caixa do mês fechou melhor do que o esperado, mas a prefeitura registrou a falta de resposta e uma nova cobrança já está a caminho.",
+            efeitosTexto: ["Nenhum gasto neste mês", "No mês que vem: cerca de R$ 1.300 de multa, juros e honorários", "A reputação fiscal da empresa piora"],
+            conceito: "Finanças Comportamentais: adiar um custo parece grátis hoje. Muitas vezes o preço sobe enquanto você espera."
+          }
+        },
+        {
+          letra: "D", titulo: "Vender um dos carros e parcelar o ISS",
+          sub: "Entra dinheiro e a parcela mensal diminui, mas a operação perde um carro.",
+          receitaTexto: -800,
+          efeitos: { caixa: 18500, carrosMensal: -2370, lojistas: -10, receitaMensal: -400 },
+          consequencia: {
+            cena: "Duas semanas depois, o carro foi vendido e o ISS foi parcelado com a entrada de R$ 500. A parcela mensal diminuiu, mas com um carro a menos a equipe faz menos visitas, e alguns lojistas menores deixam de ser atendidos de perto.",
+            efeitosTexto: ["+R$ 18.500 de caixa (R$ 19.000 da venda menos R$ 500 de entrada do ISS)", "Parcela dos carros cai R$ 2.370 por mês", "Menos visitas comerciais: cerca de 10 lojistas a menos e cerca de −R$ 800/mês na receita"],
+            conceito: "Vender ativos: transformar um bem em caixa resolve o aperto, mas reduz a capacidade de operar."
+          }
+        }
+      ]
+    },
+
+    // ---------------------------------------------------------------- MÊS 6
+    {
+      id: "m6-oportunidade", mes: 6, natureza: "Oportunidade · expansão", cenario: "escritorio",
+      npc: { nome: "Edson", papel: "dono de uma rede de 15 lojas" },
+      titulo: "Uma rede de 15 lojas quer fechar com você",
+      fala: "Sou o Edson, dono da rede. São 15 lojas e uns 700 mil por mês no cartão. Posso trazer tudo para você, se aceitar três coisas: uma taxa melhor para mim, pagamento em D+1 e que você banque a antecipação do dinheiro das minhas lojas. Eu fecho esta semana. Se não der, procuro outra credenciadora.",
+      fatos: [
+        ["15 lojas", "na rede do Edson"],
+        ["~R$ 700 mil/mês", "volume no cartão"],
+        ["D+1", "prazo de pagamento exigido"],
+        ["R$ 10.000", "capital para bancar a antecipação"]
+      ],
+      opcoes: [
+        {
+          letra: "A", titulo: "Aceitar tudo: taxa, D+1 e antecipação garantida",
+          sub: "Fecha o contrato, mas imobiliza caixa para pagar as lojas antes de receber.",
+          receitaTexto: 3000,
+          efeitos: { caixa: -10000, receitaMensal: 2400, lojistas: 15, rep: -5, flags: ["aceitouTudo"] },
+          consequencia: {
+            cena: "Duas semanas depois, as 15 lojas passam as vendas na sua máquina e o Edson recebe em D+1. Para isso, você precisou adiantar o dinheiro e agora vive de olho no prazo em que a credenciadora paga você.",
+            efeitosTexto: ["A rede fecha as 15 lojas de uma vez", "R$ 10 mil saem agora como antecipação garantida", "≈ +R$ 3 mil/mês de receita"],
+            conceito: "Descasamento de prazos: pagar o cliente antes de receber exige caixa. Crescer consome dinheiro antes de gerar dinheiro."
+          }
+        },
+        {
+          letra: "B", titulo: "Aceitar a taxa, mas recusar a antecipação",
+          sub: "Não imobiliza caixa, mas a rede fecha só metade das lojas por enquanto.",
+          receitaTexto: 1500,
+          efeitos: { receitaMensal: 1200, lojistas: 8 },
+          consequencia: {
+            cena: "Duas semanas depois, Edson aceita a taxa, mas sem a antecipação só metade das lojas passa para a sua máquina por enquanto. Ele reclama que queria receber mais cedo e diz que as outras ficam para depois.",
+            efeitosTexto: ["Sem a antecipação, a rede fecha só metade das lojas por enquanto", "≈ +R$ 1,5 mil/mês de receita", "8 lojistas a mais, sem capital imobilizado"],
+            conceito: "Negociação em partes: aceitar o que cabe no caixa e recusar o que não cabe mantém o negócio sem comprometer o futuro."
+          }
+        },
+        {
+          letra: "C", titulo: "Contraproposta: D+1 pelo PayTime, sem desconto na taxa",
+          sub: "Oferece o prazo do canal PayTime em vez de baixar a taxa. A implantação custa R$ 3.000.",
+          receitaTexto: 5000,
+          efeitos: { caixa: -3000, lojistas: 15, tpvPaytime: 900000 },
+          requer: { anyFlag: ["segurouTop10", "reativaPaytime"] },
+          bloqueioTexto: "Sem carteira PayTime ativa, a credenciadora não libera D+1 para a rede.",
+          consequencia: {
+            cena: "Duas semanas depois, Edson topa o D+1 do PayTime em troca de manter a taxa cheia. As 15 lojas migram, e o volume do canal cresce de uma vez.",
+            efeitosTexto: ["−R$ 3.000 para implantar o D+1 na rede (terminais e cadastro)", "≈ +R$ 5 mil/mês de receita", "15 lojistas a mais e R$ 900 mil a mais de volume no PayTime"],
+            conceito: "Vender valor, não preço: o prazo era o que ele queria, e foi dado pelo canal que você já tinha construído."
+          }
+        },
+        {
+          letra: "D", titulo: "Recusar a proposta",
+          sub: "Mantém a empresa como está.",
+          receitaTexto: 0,
+          efeitos: { rep: 5 },
+          consequencia: {
+            cena: "Duas semanas depois, Edson fechou com outra credenciadora. Seus lojistas atuais reparam que você manteve as regras para todos, e isso reforça a confiança deles.",
+            efeitosTexto: ["Nenhuma receita nova", "Nenhum risco de caixa", "Reputação sobe com a base atual"],
+            conceito: "Custo de oportunidade: dizer não protege o caixa de hoje, mas deixa de lado o crescimento que poderia vir."
+          }
+        }
+      ]
+    }
+  ],
+
+  DEBRIEF: [
+    "Quais informações você considerou em cada rodada? Alguma que ignorou?",
+    "Qual risco recebeu mais atenção: o caixa de hoje ou o compromisso de amanhã?",
+    "Em qual rodada a decisão foi mais \"no automático\"? O que puxou?",
+    "Que consequência você não tinha percebido antes de escolher?",
+    "Se o choque do mês 1 voltasse no mês que vem, o que faria diferente?"
+  ],
+
+  AVALIACAO: {
+    escalas: ["A simulação foi útil para pensar o negócio", "As situações eram realistas", "Eu usaria este material de novo"],
+    abertas: ["Usaria isso de novo?", "O que faltou?"]
+  }
+};
+
+if (typeof module !== "undefined") module.exports = CONTENT; else window.PNC_CONTENT = CONTENT;
+
+</script>
+<script>
+// Máquina de estados pura (sem DOM). Toda função devolve um estado novo.
+// Convenção: pendente.mes === N é aplicado no fecharMes que encerra o mês N (state.mes === N-1 antes da chamada).
+const BLOQUEIO = -15000, CHEQUE_ESPECIAL = 1.10, MULTA_META = 3000;
+
+const fmt = n => (Math.round(n) < 0 ? "−" : "") + "R$ " + String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+const limita = s => {
+  s.rep = Math.min(100, Math.max(0, s.rep));
+  s.lojistas = Math.max(0, s.lojistas);
+  s.tpvPaytime = Math.max(0, s.tpvPaytime);
+  return s;
+};
+
+function createState(content, { sessao, inicio }) {
+  const { caixa, rep, lojistas, lojistasPaytime, tpvPaytime, mes } = content.START;
+  return {
+    sessao, inicio, mes, caixa, rep, lojistas, lojistasPaytime, tpvPaytime,
+    receitaAjuste: 0, carrosMensal: content.PREMISSAS.carros, folhaMensal: content.PREMISSAS.folha,
+    compromissos: [], pendentes: [], flags: [],
+    recursos: { cartao: "disponivel", aporte: "disponivel", prazo: "disponivel" },
+    cartaoDevendo: 0, aporteDevendo: 0, prazoAdiado: 0, log: [], encerrado: null, ultimoFechamento: null
+  };
+}
+
+const barras = s => ({ caixa: s.caixa, rep: s.rep, lojistas: s.lojistas, tpvPaytime: s.tpvPaytime });
+
+function receitaMensal(s, content) {
+  const p = content.PREMISSAS;
+  return s.tpvPaytime * p.margemPaytime + (s.lojistas - s.lojistasPaytime) * p.ticketMedio * p.margemSeg + s.receitaAjuste;
+}
+
+// Os juros do cartão já crescem em cartaoDevendo no fechamento; somá-los aqui cobraria duas vezes.
+function custosMensais(s, content) {
+  const p = content.PREMISSAS;
+  return s.carrosMensal + s.folhaMensal + p.fixos + p.comissaoPct * receitaMensal(s, content);
+}
+
+function opcoesDisponiveis(s, content, rodadaIdx) {
+  return content.ROUNDS[rodadaIdx].opcoes.map(o => {
+    const r = o.requer || {};
+    const recurso = o.efeitos.usaRecurso;
+    let bloqueada = false;
+    if ((r.repMin !== undefined && s.rep < r.repMin) || (r.semFlag && s.flags.includes(r.semFlag)) ||
+        (r.anyFlag && !r.anyFlag.some(f => s.flags.includes(f)))) bloqueada = o.bloqueioTexto;
+    else if (recurso && s.recursos[recurso] === "usado") bloqueada = "Esse recurso já foi usado.";
+    return { ...o, bloqueada, custoExtra: o.garantiaSeAtrasou && s.flags.includes("atrasou") ? o.garantiaSeAtrasou : 0 };
+  });
+}
+
+// Mecânica do recurso, compartilhada por usarRecurso e pelas opções do mês 1 com usaRecurso.
+// Custo e reputação do prazo ficam de fora: a opção D já os traz nos próprios efeitos.
+function consumir(s, content, nome) {
+  s.recursos[nome] = "usado";
+  if (nome === "cartao") { s.caixa += content.RESOURCES.cartao.valor; s.cartaoDevendo = content.RESOURCES.cartao.valor; }
+  if (nome === "aporte") { s.caixa += content.RESOURCES.aporte.valor; s.aporteDevendo = content.RESOURCES.aporte.valor; }
+  if (nome === "prazo") s.prazoAdiado = s.carrosMensal;
+}
+
+function escolher(state, content, rodadaIdx, letra, porque, hora) {
+  const rodada = content.ROUNDS[rodadaIdx];
+  const op = opcoesDisponiveis(state, content, rodadaIdx).find(o => o.letra === letra);
+  if (op.bloqueada) throw new Error("bloqueada");
+  const s = structuredClone(state), e = op.efeitos;
+  const antes = barras(s);
+  s.caixa += (e.caixa || 0) - op.custoExtra;
+  s.receitaAjuste += e.receitaMensal || 0;
+  s.lojistas += e.lojistas || 0;
+  s.tpvPaytime += e.tpvPaytime || 0;
+  s.rep += e.rep || 0;
+  s.carrosMensal += e.carrosMensal || 0;
+  s.folhaMensal += e.folhaMensal || 0;
+  for (const f of e.flags || []) if (!s.flags.includes(f)) s.flags.push(f);
+  if (e.pendente) s.pendentes.push({ ...e.pendente });
+  if (e.compromisso) s.compromissos.push({ mesesRestantes: e.compromisso.meses, valor: e.compromisso.valor });
+  if (e.usaRecurso) consumir(s, content, e.usaRecurso);
+  limita(s);
+  s.log.push({ tipo: "escolha", mes: rodada.mes, rodadaId: rodada.id, letra, titulo: op.titulo, porque, hora, antes, depois: barras(s) });
+  return s;
+}
+
+function usarRecurso(state, content, nome, porque, hora) {
+  const s = structuredClone(state), r = content.RESOURCES[nome];
+  const antes = barras(s);
+  // prazo no último mês nunca seria cobrado de volta, então também é recusado
+  const motivo = s.recursos[nome] === "usado" ? "já usado"
+    : nome === "prazo" && s.rep < r.repMin ? `reputação abaixo de ${r.repMin}`
+    : nome === "prazo" && s.mes >= 5 ? "último mês" : null;
+  if (!motivo) {
+    consumir(s, content, nome);
+    if (nome === "prazo") { s.caixa -= r.custo; s.rep += 5; }
+    limita(s);
+  }
+  s.log.push({ tipo: motivo ? "recurso_recusado" : "recurso", mes: s.mes + 1, titulo: motivo ? `${r.label} — recusado: ${motivo}` : r.label, porque, hora, antes, depois: barras(s) });
+  return s;
+}
+
+const soma = (l, k) => l.reduce((t, x) => t + (x[k] || 0), 0);
+const multaMeta = s => s.mes + 1 === 6 && s.flags.includes("metaPaytime") && !s.flags.includes("segurouTop10") && !s.flags.includes("reativaPaytime") ? MULTA_META : 0;
+
+// O que o próximo fechamento fará, sem mutar. custos já descontam as parcelas adiadas pelo prazo neste mês;
+// pendentes trazem caixa com sinal (a multa do ISS é negativa). total é antes do cartão e do cheque especial.
+function projetarFechamento(s, content) {
+  const receita = receitaMensal(s, content), custos = custosMensais(s, content) - s.prazoAdiado;
+  const compromissos = soma(s.compromissos.filter(c => !c.prazo), "valor"), prazoCobrado = soma(s.compromissos.filter(c => c.prazo), "valor");
+  const pendentes = s.pendentes.filter(p => p.mes === s.mes + 1).map(({ descricao, caixa, tpvPaytime }) => ({ descricao, caixa, tpvPaytime }));
+  const multa = multaMeta(s);
+  return { receita, custos, compromissos, pendentes, prazoCobrado, multaMeta: multa,
+    total: receita - custos - compromissos + soma(pendentes, "caixa") - prazoCobrado - multa };
+}
+
+function fecharMes(state, content) {
+  const p = projetarFechamento(state, content);
+  const s = structuredClone(state);
+  s.caixa += p.receita - p.custos;
+  for (const c of s.compromissos) { s.caixa -= c.valor; c.mesesRestantes--; }
+  s.compromissos = s.compromissos.filter(c => c.mesesRestantes > 0);
+  // prazo pedido neste mês: as parcelas dos carros saem deste fechamento e voltam, extras, no próximo
+  if (s.prazoAdiado) { s.compromissos.push({ mesesRestantes: 1, valor: s.prazoAdiado, prazo: true }); s.prazoAdiado = 0; }
+  const vencem = s.pendentes.filter(x => x.mes === s.mes + 1);
+  for (const x of vencem) { s.caixa += x.caixa || 0; s.tpvPaytime += x.tpvPaytime || 0; }
+  s.pendentes = s.pendentes.filter(x => !vencem.includes(x));
+  let cartaoJuros = 0, cartaoQuitado = null, chequeEspecial = null;
+  if (s.cartaoDevendo > 0) {
+    const antes = s.cartaoDevendo;
+    s.cartaoDevendo *= 1 + content.RESOURCES.cartao.jurosMes;
+    cartaoJuros = s.cartaoDevendo - antes;
+    if (s.caixa >= s.cartaoDevendo) { cartaoQuitado = s.cartaoDevendo; s.caixa -= s.cartaoDevendo; s.cartaoDevendo = 0; }
+  }
+  if (s.caixa < 0) { chequeEspecial = { juros: -s.caixa * (CHEQUE_ESPECIAL - 1), rep: Math.min(10, s.rep) }; s.caixa *= CHEQUE_ESPECIAL; s.rep -= 10; }
+  s.caixa -= p.multaMeta;
+  s.ultimoFechamento = { receita: p.receita, custos: p.custos, compromissos: p.compromissos, pendentes: p.pendentes, prazoCobrado: p.prazoCobrado,
+    multaMeta: p.multaMeta, chequeEspecial, cartaoQuitado, cartaoJuros };
+  s.mes += 1;
+  limita(s);
+  if (s.caixa <= BLOQUEIO) s.encerrado = { motivo: "bloqueio", mes: s.mes };
+  else if (s.mes === 6) s.encerrado = { motivo: "fim", mes: 6 };
+  return s;
+}
+
+function veredito(s, content) {
+  const numeros = `A empresa chegou ao mês ${s.mes} com caixa de ${fmt(s.caixa)}, reputação ${s.rep} e ${s.lojistas} lojistas.`;
+  if (s.encerrado && s.encerrado.motivo === "bloqueio")
+    return `${numeros} O banco bloqueou a conta no mês ${s.encerrado.mes}; o jogo terminou antes do prazo.`;
+  const e = receitaMensal(s, content) - custosMensais(s, content);
+  return `${numeros} No fim, a estrutura (receita menos custos) fechou o mês ${e >= 0 ? "positiva" : "negativa"} em ${fmt(Math.abs(e))}.`;
+}
+
+// "2026-10-24T10:05:00Z (07:05)": ISO e hora local
+const quando = iso => {
+  const d = new Date(iso);
+  return isNaN(d) ? String(iso ?? "") : `${iso} (${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")})`;
+};
+
+function exportarTexto(s, content) {
+  const rodadas = Object.fromEntries(content.ROUNDS.map(r => [r.id, r.titulo]));
+  const linhas = [
+    `Sessão: ${s.sessao}`, `Início: ${quando(s.inicio)}`, `Fim: ${s.log.length ? quando(s.log.at(-1).hora) : ""}`,
+    `Caixa inicial: ${fmt(content.START.caixa)} | Caixa final: ${fmt(s.caixa)}`,
+    "Rodada / choque | Alternativa escolhida | Justificativa apresentada | Viés ou padrão observado | Reflexão no debriefing"
+  ];
+  for (const d of s.log)
+    linhas.push(`Mês ${d.mes} · ${d.rodadaId ? rodadas[d.rodadaId] : "recurso"} | ${d.letra ? d.letra + ". " : ""}${d.titulo} | ${d.porque} | | `);
+  linhas.push("", `Passivos no fim: cartão ${fmt(s.cartaoDevendo)} | aporte ${fmt(s.aporteDevendo)}`, veredito(s, content));
+  if (s.avaliacao) {
+    const A = content.AVALIACAO, av = s.avaliacao;
+    linhas.push("", "Avaliação:",
+      ...A.escalas.map((t, i) => `${t}: ${av.escalas?.[i] ?? "sem nota"}/5`),
+      ...A.abertas.map((t, i) => `${t} ${av.abertas?.[i]?.trim() || "sem resposta"}`));
+  }
+  linhas.push("", "Barras antes/depois e horários:");
+  const b = (x, y) => `${x} → ${y}`;
+  for (const d of s.log)
+    linhas.push(`Mês ${d.mes} ${d.letra || d.titulo}: caixa ${b(fmt(d.antes.caixa), fmt(d.depois.caixa))}; reputação ${b(d.antes.rep, d.depois.rep)}; lojistas ${b(d.antes.lojistas, d.depois.lojistas)}; TPV PayTime ${b(fmt(d.antes.tpvPaytime), fmt(d.depois.tpvPaytime))}; ${quando(d.hora)}`);
+  return linhas.join("\n");
+}
+
+const ENGINE = { createState, receitaMensal, custosMensais, opcoesDisponiveis, escolher, usarRecurso, projetarFechamento, fecharMes, barras, veredito, exportarTexto };
+if (typeof module !== "undefined") module.exports = ENGINE; else window.PNC_ENGINE = ENGINE;
+
+</script>
+<script>
+const C = window.PNC_CONTENT, E = window.PNC_ENGINE;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const grp = n => String(Math.abs(Math.round(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+const brl = n => (Math.round(n) < 0 ? "−" : "") + "R$ " + grp(n);
+const inteiro = n => (Math.round(n) < 0 ? "−" : "") + grp(n);
+const mi = n => "R$ " + (n / 1e6).toFixed(2).replace(".", ",") + " mi";
+const sinal = (x, f) => (Math.round(x) > 0 ? "+" : Math.round(x) < 0 ? "−" : "") + f(Math.abs(x));
+const tom = x => (Math.round(x) < 0 ? "neg" : Math.round(x) > 0 ? "pos" : "");
+const ok3 = t => t.replace(/\s/g, "").length >= 3;
+const agora = () => new Date().toISOString();
+const reduz = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const BARRAS = [
+  { k: "caixa", nome: "Caixa", id: "barCaixa", min: -15000, max: 15000, f: brl },
+  { k: "rep", nome: "Reputação", id: "barRep", min: 0, max: 100, f: inteiro },
+  { k: "lojistas", nome: "Lojistas", id: "barLoj", min: 300, max: 450, f: inteiro },
+  { k: "tpvPaytime", nome: "Volume PayTime", id: "barTpv", min: 0, max: 2e6, f: brl, curto: mi }
+];
+const FICHA = { cartao: "Cartão", aporte: "Aporte", prazo: "Prazo" };
+const REGRA = {
+  cartao: r => `Entram ${brl(r.valor)} no caixa agora; a dívida cresce ${Math.round(r.jurosMes * 100)}% ao mês e é quitada no primeiro fechamento em que o caixa cobrir o valor.`,
+  aporte: r => `Entram ${brl(r.valor)} no caixa, sem juros, como dívida informal com quem emprestou.`,
+  prazo: r => `O banco adia as parcelas dos carros deste fechamento para o próximo por ${brl(r.custo)}; exige reputação ${r.repMin} ou mais e não vale no último mês.`
+};
+const AV0 = () => ({ escalas: C.AVALIACAO.escalas.map(() => null), abertas: C.AVALIACAO.abertas.map(() => "") });
+const novoUi = () => ({ tela: "prologo", rodada: 0, escolhaPendente: null, nome: "", porque: "", ficha: null, fichaPorque: "", aviso: null, fechamento: null });
+
+let S = null;
+let ui = novoUi();
+
+// ---------- registro: localStorage sempre que der, db (artifact) quando concedido, cópia como último recurso ----------
+const slug = t => String(t).toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-z0-9]+/g, "-").slice(0, 40).replace(/^-+|-+$/g, "") || "sessao";
+const sessionId = s => slug(s.sessao) + "-" + s.inicio.replace(/[^0-9]/g, "").slice(0, 12);
+const storage = (() => {
+  let db = null, local = true, rodando = false;
+  const fila = new Map(); // sessionId → estado mais recente ainda não gravado
+  try { localStorage.setItem("pnc-teste", "1"); localStorage.removeItem("pnc-teste"); } catch { local = false; }
+  const status = () => { $("#storageStatus").textContent = "registro: " + (db ? (local ? "nuvem + local" : "nuvem") : local ? "local" : "só cópia"); };
+  const corpo = s => {
+    const { sessao, inicio, mes, caixa, rep, lojistas, tpvPaytime, recursos, flags, encerrado, avaliacao, log } = s;
+    return { sessao, inicio, mes, caixa, rep, lojistas, tpvPaytime, recursos, flags, encerrado, avaliacao, log, atualizado: agora() };
+  };
+  const gravar = async (id, s) => {
+    const ref = db.collection("sessoes").doc(id), body = corpo(s);
+    try { await ref.set(body); }
+    catch (e) {
+      if (e?.code !== "unavailable") throw e;
+      await new Promise(r => setTimeout(r, 1500));
+      await ref.set(body);
+    }
+  };
+  // Uma escrita por vez no total; por sessão só o estado mais recente espera na fila.
+  // Erro do db (tem `code`) desliga o db nesta visita; erro sem `code` é bug e vai para o console.
+  const bombear = async () => {
+    rodando = true;
+    while (fila.size && db) {
+      const [id, s] = fila.entries().next().value;
+      fila.delete(id);
+      try { await gravar(id, s); } catch (e) { if (!e || !e.code) console.error(e); db = null; status(); }
+    }
+    rodando = false;
+  };
+  Promise.resolve().then(() => window.claude?.use ? window.claude.use("db") : null).catch(() => null).then(d => {
+    db = d || null;
+    status();
+    if (db && fila.size && !rodando) bombear();
+  });
+  status();
+  return {
+    save(s) {
+      let id, json;
+      try { id = sessionId(s); json = JSON.stringify(s); } catch (e) { console.error(e); return; }
+      if (local) try { localStorage.setItem("pnc:" + id, json); } catch { local = false; status(); }
+      fila.set(id, s);
+      if (db && !rodando) bombear();
+    },
+    // Sessão local mais recente ainda em andamento, ou null.
+    aberta() {
+      try {
+        return Object.keys(localStorage).filter(k => k.startsWith("pnc:"))
+          .map(k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } })
+          .filter(s => s && s.encerrado === null && typeof s.inicio === "string" && Array.isArray(s.log)
+            && Number.isInteger(s.mes) && s.mes >= 0 && s.mes <= 6)
+          .sort((a, b) => (a.inicio < b.inicio ? 1 : -1))[0] ?? null;
+      } catch { return null; }
+    },
+    copy(s) {
+      const texto = E.exportarTexto(s, C), aviso = $("#copiaAviso"), area = $("#copiaTexto");
+      const falhou = () => {
+        area.value = texto;
+        area.hidden = false;
+        area.focus();
+        area.select();
+        aviso.textContent = "Texto selecionado abaixo: use Ctrl+C (ou Cmd+C) para copiar.";
+      };
+      let p;
+      try { p = navigator.clipboard.writeText(texto); } catch (e) { p = Promise.reject(e); }
+      p.then(() => { area.hidden = true; aviso.textContent = "Registro copiado"; }, falhou);
+    }
+  };
+})();
+
+// Único ponto de transição de estado; salva toda mudança real. Texto da avaliação espera 600 ms de pausa.
+let adiado = null;
+const descarrega = () => { if (adiado) { clearTimeout(adiado); adiado = null; if (S) storage.save(S); } };
+function commit(next, devagar) {
+  const mudou = next && next !== S;
+  if (!next) descarrega(); else if (mudou && adiado) { clearTimeout(adiado); adiado = null; }
+  S = next;
+  if (mudou) devagar ? (adiado = setTimeout(() => { adiado = null; storage.save(S); }, 600)) : storage.save(S);
+  render();
+}
+addEventListener("pagehide", descarrega);
+
+// ---------- peças ----------
+const geo = (d, v) => {
+  const t = Math.min(1, Math.max(0, (v - d.min) / (d.max - d.min)));
+  return d.k === "caixa" ? { left: Math.min(t, .5) * 100, width: Math.abs(t - .5) * 100 } : { left: 0, width: t * 100 };
+};
+const classeFill = (d, v) => (d.k === "caixa" && v < 0 ? "neg" : d.k === "rep" && v < C.RESOURCES.prazo.repMin ? "baixa" : "");
+const trilho = (d, v) => {
+  const g = geo(d, v);
+  return `<div class="bar${d.k === "caixa" ? " grande" : ""}" aria-hidden="true">${d.k === "caixa" ? '<span class="zero"></span>' : ""}${d.k === "rep" ? '<span class="tick" style="left:50%"></span>' : ""}<span class="fill ${classeFill(d, v)}" style="left:${g.left}%;width:${g.width}%"></span></div>`;
+};
+// Deltas sempre a partir de pares de E.barras() (log.antes/depois ou fechamento.antes/depois).
+const mudancas = (a, b) => BARRAS.filter(d => Math.round(a[d.k]) !== Math.round(b[d.k]));
+const deltaHTML = (d, a, b) => {
+  const x = b[d.k] - a[d.k];
+  return `<li>${d.nome}: <span class="num">${d.f(a[d.k])} → ${d.f(b[d.k])}</span> <span class="num ${tom(x)}">(${sinal(x, d.f)})</span></li>`;
+};
+const deltasHTML = (a, b) => `<ul class="deltas">${mudancas(a, b).map(d => deltaHTML(d, a, b)).join("")}</ul>`;
+const fatos = lista => `<ul class="facts">${lista.map(([v, l]) => `<li><b>${esc(v)}</b><span>${esc(l)}</span></li>`).join("")}</ul>`;
+const pessoa = (cls, nome, npc) => `<div class="person ${cls}"${npc ? ` data-npc="${esc(nome)}"` : ""}><span class="tag">${esc(nome)}</span><div class="head"></div><div class="torso"></div></div>`;
+const cena = (r, dentro) => `<section class="scene" data-cenario="${esc(r.cenario)}" data-mes="${r.mes}" aria-label="Cena"><div class="scene-art" aria-hidden="true"><div class="fundo"></div><div class="movel"></div><div class="objeto"></div>${pessoa("voce", "Você")}${pessoa("outro", r.npc.nome, true)}</div><div class="dialog">${dentro}</div></section>`;
+// Uma frase por item do fechamento que de fato mexeu no caixa (E.fecharMes → ultimoFechamento).
+const fechamentoHTML = () => {
+  const f = ui.fechamento, u = S?.ultimoFechamento;
+  if (!f || !u) return "";
+  const v = n => `<span class="num">${brl(n)}</span>`;
+  const itens = [
+    `Receita do mês ${v(u.receita)}; custos (carros, folha, fixos e comissão) ${v(-u.custos)}.`,
+    S.compromissos.some(c => c.prazo) && "As parcelas dos carros adiadas pelo prazo do banco voltam no próximo fechamento.",
+    u.compromissos && `Parcela contratada dos terminais: ${v(-u.compromissos)}.`,
+    ...u.pendentes.map(p => `${esc(p.descricao)} (${p.caixa ? v(p.caixa) : `<span class="num">+${mi(p.tpvPaytime)}</span> por mês no PayTime`}).`),
+    u.prazoCobrado && `Parcelas dos carros adiadas pelo prazo, cobradas agora: ${v(-u.prazoCobrado)}.`,
+    u.cartaoQuitado ? `Cartão quitado: ${v(-u.cartaoQuitado)}, já com ${v(u.cartaoJuros)} de juros.`
+      : u.cartaoJuros && `Juros do cartão: ${v(u.cartaoJuros)} somados à dívida, que ficou em ${v(S.cartaoDevendo)}.`,
+    u.chequeEspecial && `Caixa negativo: o cheque especial cobrou ${v(-u.chequeEspecial.juros)} e tirou ${u.chequeEspecial.rep} de reputação.`,
+    u.multaMeta && `Multa contratual da credenciadora: ${v(-u.multaMeta)}, a carteira PayTime não cresceu.`,
+  ].filter(Boolean);
+  return `<section class="fechamento" aria-label="Fechamento do mês ${f.mes}"><p><strong>Mês ${f.mes} fechado.</strong></p><ul class="itens">${itens.map(t => `<li>${t}</li>`).join("")}</ul>${deltasHTML(f.antes, f.depois)}</section>`;
+};
+// Previsão do próximo fechamento (E.projetarFechamento), antes de o jogador clicar em fechar.
+const previsaoHTML = mes => {
+  const total = E.projetarFechamento(S, C).total, x = Math.round(total / 100) * 100, fica = total + S.caixa;
+  // fecharMes é puro: simulá-lo dá o bloqueio exato (o cheque especial de 10% vem antes do teste de −15 mil)
+  const bloqueia = E.fecharMes(S, C).encerrado?.motivo === "bloqueio";
+  const fichas = Object.values(S.recursos).some(r => r !== "usado") ? " As fichas ainda podem ser usadas." : "";
+  const alerta = fica >= 0 ? "" : `<p${bloqueia ? ' class="alerta"' : ""}>Se fechar negativo, o cheque especial cobra 10% e tira 10 de reputação; abaixo de −R$ 15 mil o banco bloqueia a conta.${bloqueia ? " No ritmo atual o banco bloqueia a conta neste fechamento." : ""}${fichas}</p>`;
+  return `<section class="previsao" aria-label="Previsão do fechamento"><p><strong>Previsão do fechamento do mês ${mes}:</strong> <span class="num ${tom(x)}">≈ ${sinal(x, brl)}</span></p>${alerta}</section>`;
+};
+
+// ---------- telas ----------
+const TELAS = {
+  prologo() {
+    const P = C.PROLOGO, aberta = storage.aberta();
+    return `
+    <h1 tabindex="-1">PayNew sob Choque</h1>
+    <p class="lead">${esc(P.titulo)}</p>
+    ${aberta ? `<div class="acoes"><button type="button" class="btn ghost" data-acao="continuar">Continuar sessão '${esc(aberta.sessao)}' (mês ${Math.min(aberta.mes + 1, 6)})</button></div>` : ""}
+    ${P.paragrafos.map(t => `<p>${esc(t)}</p>`).join("")}
+    ${fatos(P.fatos)}
+    <p>Durante o jogo, três recursos de emergência ficam no topo da tela: o cartão da empresa, o aporte de um terceiro e o pedido de prazo ao banco. Cada um pode ser usado uma vez e, como toda escolha, pede uma justificativa.</p>
+    <form id="prologoForm" class="campo" novalidate>
+      <label for="sessaoNome">Nome da sessão</label>
+      <input type="text" id="sessaoNome" required minlength="2" autocomplete="off" placeholder="ex.: teste 24/10" aria-describedby="sessaoDica" value="${esc(ui.nome)}">
+      <p id="sessaoDica" class="dica">Identifica esta sessão no registro, por exemplo a data e a turma.</p>
+      <button type="submit" class="btn" id="comecar" ${ui.nome.trim().length >= 2 ? "" : "disabled"}>Começar o mês 1</button>
+    </form>
+    <p class="dica">Laboratório de Decisões sob Choques, Projeto de Extensão. Todos os nomes de pessoas são fictícios.</p>`;
+  },
+
+  fase() {
+    const r = C.ROUNDS[ui.rodada];
+    const ops = E.opcoesDisponiveis(S, C, ui.rodada);
+    const p = ui.escolhaPendente;
+    const opt = o => {
+      const sel = p === o.letra;
+      return `<li>
+        <button type="button" class="opt" id="opt-${o.letra}" data-acao="opcao" data-letra="${o.letra}" aria-pressed="${sel}"${o.bloqueada ? ` disabled aria-describedby="bloq-${o.letra}"` : ""}>
+          <span class="letter">${o.letra}</span>
+          <span><span class="opt-t">${esc(o.titulo)}</span><span class="opt-s">${esc(o.sub)}</span>${o.custoExtra ? `<span class="extra">+ ${brl(o.custoExtra)} de garantia</span>` : ""}${sel ? `<span class="marcada">Sua escolha</span>` : ""}</span>
+        </button>
+        ${o.bloqueada ? `<p class="bloqueio" id="bloq-${o.letra}">${esc(o.bloqueada)}</p>` : ""}
+      </li>`;
+    };
+    return `
+    ${fechamentoHTML()}
+    <h1 tabindex="-1">${esc(r.titulo)}</h1>
+    <p class="meta">Mês ${r.mes} de 6 · ${esc(r.natureza)}</p>
+    ${cena(r, `<p class="npc"><span class="npc-nome">${esc(r.npc.nome)}</span><span class="npc-papel">${esc(r.npc.papel)}</span></p><p class="fala">“${esc(r.fala)}”</p>`)}
+    ${fatos(r.fatos)}
+    <h2>O que você faz?</h2>
+    <ul class="opts">${ops.map(opt).join("")}</ul>
+    ${p ? `<div class="porque" id="porqueBox">
+      <label for="porque">Por que a ${p}, e não as outras?</label>
+      <textarea id="porque" rows="3" aria-describedby="porqueDica">${esc(ui.porque)}</textarea>
+      <p id="porqueDica" class="dica">Uma ou duas frases bastam. A justificativa entra no registro da sessão e volta no debriefing.</p>
+      <button type="button" class="btn" id="confirmar" data-acao="confirmar" ${ok3(ui.porque) ? "" : "disabled"}>Confirmar a ${p}</button>
+    </div>` : ""}`;
+  },
+
+  consequencia() {
+    const r = C.ROUNDS[ui.rodada];
+    const d = S.log.findLast(x => x.tipo === "escolha" && x.rodadaId === r.id);
+    const o = r.opcoes.find(x => x.letra === d.letra), q = o.consequencia;
+    return `
+    <h1 tabindex="-1">${esc(r.titulo)}</h1>
+    <p class="meta">Mês ${r.mes} de 6 · consequência</p>
+    <div class="escolha-feita">
+      <p><span class="letter">${d.letra}</span>${esc(o.titulo)}</p>
+      <p class="seu-porque">Seu porquê: “${esc(d.porque)}”</p>
+    </div>
+    ${cena(r, `<p class="fala">${esc(q.cena)}</p>`)}
+    <section aria-labelledby="hMudou">
+      <h2 id="hMudou">O que mudou agora</h2>
+      ${mudancas(d.antes, d.depois).length ? deltasHTML(d.antes, d.depois) : `<p class="dica">Nenhum indicador mudou na hora; os efeitos aparecem no fechamento do mês.</p>`}
+      <ul class="efeitos">${q.efeitosTexto.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+    </section>
+    <aside class="lesson"><p><span class="lesson-k">Conceito</span>${esc(q.conceito)}</p></aside>
+    ${previsaoHTML(r.mes)}
+    <button type="button" class="btn" id="proximo" data-acao="proximo">Fechar o mês ${r.mes}</button>`;
+  },
+
+  epilogo() {
+    const fim = S.encerrado, b0 = E.barras(C.START), b = E.barras(S), av = S.avaliacao ?? AV0();
+    const passivos = [["cartão", S.cartaoDevendo], ["aporte", S.aporteDevendo]].filter(([, n]) => Math.round(n) > 0).map(([t, n]) => `${t} <span class="num">${brl(n)}</span>`);
+    const marca = d => d.tipo === "escolha" ? d.letra : d.tipo === "recurso" ? "Recurso" : "Recusado";
+    const item = d => `<li class="${d.tipo}">
+      <span class="quando">Mês ${d.mes}</span><span class="marca">${marca(d)}</span>
+      <span class="dc"><span class="lbl">caixa</span><span class="num ${tom(d.depois.caixa - d.antes.caixa)}">${sinal(d.depois.caixa - d.antes.caixa, brl)}</span></span>
+      <div class="oque"><p class="t">${esc(d.titulo)}</p><p class="p">“${esc(d.porque)}”</p></div>
+    </li>`;
+    return `
+    ${fechamentoHTML()}
+    <h1 tabindex="-1">${fim && fim.motivo === "bloqueio" ? `O banco bloqueou a conta no mês ${fim.mes}` : "Seis meses depois"}</h1>
+    <p class="veredito">${esc(E.veredito(S, C))}</p>
+    <section aria-labelledby="hFinal">
+      <h2 id="hFinal">Do início ao fim</h2>
+      <ul class="finais">${BARRAS.map(d => `<li><div class="finais-top"><span>${d.nome}</span><span class="num">${d.f(b0[d.k])} → ${d.f(b[d.k])}</span></div>${trilho(d, b[d.k])}</li>`).join("")}</ul>
+      ${passivos.length ? `<p class="dica">Passivos: ${passivos.join(" · ")}</p>` : ""}
+    </section>
+    <section aria-labelledby="hLinha">
+      <h2 id="hLinha">Suas decisões</h2>
+      <ol class="linha">${S.log.map(item).join("")}</ol>
+    </section>
+    <section aria-labelledby="hDeb">
+      <h2 id="hDeb">Debriefing</h2>
+      <ol class="deb">${C.DEBRIEF.map(t => `<li>${esc(t)}</li>`).join("")}</ol>
+    </section>
+    <section aria-labelledby="hAval" class="aval">
+      <h2 id="hAval">Avaliação da simulação</h2>
+      <p class="dica" id="escalaDica">De 0 (discordo totalmente) a 5 (concordo totalmente).</p>
+      ${C.AVALIACAO.escalas.map((t, i) => `<fieldset class="escala" aria-describedby="escalaDica"><legend>${esc(t)}</legend><div class="notas">${[0, 1, 2, 3, 4, 5].map(n =>
+        `<label class="nota"><input type="radio" name="esc${i}" value="${n}" data-escala="${i}"${av.escalas[i] === n ? " checked" : ""}><span>${n}</span></label>`).join("")}</div></fieldset>`).join("")}
+      ${C.AVALIACAO.abertas.map((t, i) => `<div class="campo"><label for="aberta${i}">${esc(t)}</label><textarea id="aberta${i}" rows="3" data-aberta="${i}">${esc(av.abertas[i])}</textarea></div>`).join("")}
+    </section>
+    <div class="acoes">
+      <button type="button" class="btn" id="copiar" data-acao="copiar">Copiar o registro</button>
+      <button type="button" class="btn ghost" data-acao="nova">Nova sessão</button>
+    </div>
+    <p id="copiaAviso" class="dica" role="status"></p>
+    <textarea id="copiaTexto" rows="10" readonly aria-label="Registro da sessão" hidden></textarea>`;
+  }
+};
+
+// ---------- HUD ----------
+function hud() {
+  $("#hud").hidden = !S;
+  if (!S) return;
+  const fim = S.encerrado;
+  $("#hudMes").textContent = !fim ? `Mês ${S.mes + 1} de 6` : fim.motivo === "bloqueio" ? `Bloqueio no mês ${fim.mes}` : "Mês 6 de 6, fim";
+  $("#hudSessao").textContent = S.sessao;
+  const b = E.barras(S);
+  $("#saldo").textContent = brl(b.caixa);
+  $("#saldo").classList.toggle("neg", b.caixa < 0);
+  for (const d of BARRAS) {
+    const el = document.getElementById(d.id), fill = el.querySelector(".fill"), g = geo(d, b[d.k]);
+    fill.style.left = g.left + "%";
+    fill.style.width = g.width + "%";
+    fill.className = "fill " + classeFill(d, b[d.k]);
+    el.setAttribute("aria-valuenow", Math.round(b[d.k]));
+    el.setAttribute("aria-valuetext", d.f(b[d.k]));
+    const v = document.querySelector(`[data-val="${d.k}"]`);
+    if (v) v.textContent = (d.curto || d.f)(b[d.k]);
+  }
+  const sub = n => {
+    const dev = n === "cartao" ? S.cartaoDevendo : n === "aporte" ? S.aporteDevendo : 0;
+    return dev > 0 ? `devendo <span class="num">${brl(dev)}</span>` : S.recursos[n] === "usado" ? "usado" : "disponível";
+  };
+  $("#fichas").innerHTML = Object.keys(FICHA).map(n => {
+    const usado = S.recursos[n] === "usado";
+    return `<button type="button" class="ficha${usado ? " usado" : ""}" id="ficha-${n}" data-acao="ficha" data-nome="${n}" aria-expanded="${ui.ficha === n}" aria-controls="fichaPainel"${usado || fim ? " disabled" : ""}>
+      <span class="ficha-n">${FICHA[n]}</span><span class="ficha-s">${sub(n)}</span></button>`;
+  }).join("");
+  const painel = $("#fichaPainel"), n = ui.ficha;
+  painel.hidden = !n;
+  painel.innerHTML = n ? `
+    <p class="regra"><strong>${esc(C.RESOURCES[n].label)}.</strong> ${REGRA[n](C.RESOURCES[n])}</p>
+    <label for="fichaPorque">Por que agora?</label>
+    <textarea id="fichaPorque" rows="2">${esc(ui.fichaPorque)}</textarea>
+    <div class="acoes">
+      <button type="button" class="btn" id="fichaUsar" data-acao="usar" ${ok3(ui.fichaPorque) ? "" : "disabled"}>Usar</button>
+      <button type="button" class="btn ghost" data-acao="cancelarFicha">Cancelar</button>
+    </div>` : "";
+  const aviso = $("#fichaAviso");
+  aviso.textContent = ui.aviso ? ui.aviso.texto : "";
+  aviso.className = "aviso" + (ui.aviso?.recusa ? " recusa" : "");
+  aviso.hidden = !ui.aviso;
+}
+
+// ---------- render ----------
+// O palco só é redesenhado quando muda de tela, de escolha pendente ou de log; assim
+// digitar na avaliação não recria os campos.
+let ultimaTela = null, ultimaChave = null;
+function render() {
+  const foco = document.activeElement?.id;
+  hud();
+  const tela = ui.tela + ":" + ui.rodada;
+  const chave = [tela, ui.escolhaPendente, S ? S.log.length : -1].join("|");
+  const stage = $("#stage");
+  if (chave !== ultimaChave) {
+    stage.innerHTML = TELAS[ui.tela]();
+    stage.classList.toggle("entra", tela !== ultimaTela);
+    ultimaChave = chave;
+  }
+  if (tela !== ultimaTela) {
+    ultimaTela = tela;
+    stage.querySelector("h1")?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: reduz() ? "auto" : "smooth" });
+  } else if (foco && document.activeElement?.id !== foco) {
+    document.getElementById(foco)?.focus({ preventScroll: true });
+  }
+}
+
+// ---------- ações ----------
+function comecar() {
+  const sessao = ui.nome.trim();
+  if (sessao.length < 2) return;
+  Object.assign(ui, { tela: "fase", rodada: 0, escolhaPendente: null, porque: "", ficha: null, fichaPorque: "", aviso: null, fechamento: null });
+  commit({ ...E.createState(C, { sessao, inicio: agora() }), avaliacao: AV0() });
+}
+
+const bloqueada = (s, letra) => E.opcoesDisponiveis(s, C, ui.rodada).find(o => o.letra === letra)?.bloqueada;
+
+const ACOES = {
+  opcao(b) {
+    ui.escolhaPendente = b.dataset.letra;
+    render();
+    $("#porqueBox")?.scrollIntoView({ block: "nearest", behavior: reduz() ? "auto" : "smooth" });
+  },
+  confirmar() {
+    const porque = ui.porque.trim();
+    if (!ui.escolhaPendente || !ok3(porque) || bloqueada(S, ui.escolhaPendente)) return;
+    const next = E.escolher(S, C, ui.rodada, ui.escolhaPendente, porque, agora());
+    Object.assign(ui, { tela: "consequencia", porque: "", ficha: null, fichaPorque: "", aviso: null });
+    commit(next);
+  },
+  proximo() {
+    const antes = E.barras(S), next = E.fecharMes(S, C);
+    ui.fechamento = { mes: next.mes, antes, depois: E.barras(next) };
+    if (next.encerrado) ui.tela = "epilogo";
+    else Object.assign(ui, { tela: "fase", rodada: ui.rodada + 1, escolhaPendente: null });
+    Object.assign(ui, { ficha: null, fichaPorque: "", aviso: null });
+    commit(next);
+  },
+  ficha(b) {
+    const n = b.dataset.nome;
+    Object.assign(ui, { ficha: ui.ficha === n ? null : n, fichaPorque: "", aviso: null });
+    render();
+    if (ui.ficha) $("#fichaPorque")?.focus();
+  },
+  cancelarFicha() {
+    const n = ui.ficha;
+    Object.assign(ui, { ficha: null, fichaPorque: "" });
+    render();
+    document.getElementById("ficha-" + n)?.focus();
+  },
+  usar() {
+    const nome = ui.ficha, porque = ui.fichaPorque.trim();
+    if (!nome || !ok3(porque)) return;
+    const next = E.usarRecurso(S, C, nome, porque, agora()), d = next.log.at(-1);
+    ui.aviso = d.tipo === "recurso_recusado"
+      ? { recusa: true, texto: d.titulo + "." }
+      : { recusa: false, texto: `${d.titulo}: ` + mudancas(d.antes, d.depois).map(x => `${x.nome} ${x.f(d.antes[x.k])} → ${x.f(d.depois[x.k])}`).join("; ") + "." };
+    Object.assign(ui, { ficha: null, fichaPorque: "" });
+    // Ex.: escolher B (cartão) no mês 1 e depois usar a ficha do cartão bloqueia a B.
+    if (ui.tela === "fase" && ui.escolhaPendente && bloqueada(next, ui.escolhaPendente)) ui.escolhaPendente = null;
+    commit(next);
+    const chip = document.getElementById("ficha-" + nome);
+    (chip && !chip.disabled ? chip : document.querySelector(".ficha:not(:disabled)"))?.focus();
+  },
+  nova() {
+    ui = novoUi();
+    commit(null);
+  },
+  // Retomar não é mudança de estado: não salva.
+  continuar() {
+    const s = storage.aberta();
+    if (!s) return;
+    const rodada = Math.min(s.mes, C.ROUNDS.length - 1);
+    const jaEscolheu = s.log.some(d => d.tipo === "escolha" && d.rodadaId === C.ROUNDS[rodada].id);
+    ui = { ...novoUi(), tela: jaEscolheu ? "consequencia" : "fase", rodada };
+    S = s;
+    render();
+  },
+  copiar() {
+    if (S) storage.copy(S);
+  }
+};
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-acao]");
+  if (!b || b.disabled || b.getAttribute("aria-disabled") === "true") return;
+  ACOES[b.dataset.acao]?.(b);
+});
+document.addEventListener("submit", e => {
+  if (e.target.id !== "prologoForm") return;
+  e.preventDefault();
+  comecar();
+});
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "sessaoNome") { ui.nome = t.value; $("#comecar").disabled = t.value.trim().length < 2; }
+  else if (t.id === "porque") { ui.porque = t.value; $("#confirmar").disabled = !ok3(t.value); }
+  else if (t.id === "fichaPorque") { ui.fichaPorque = t.value; $("#fichaUsar").disabled = !ok3(t.value); }
+  else if (t.dataset.aberta !== undefined) {
+    const av = S.avaliacao ?? AV0(), abertas = [...av.abertas];
+    abertas[+t.dataset.aberta] = t.value;
+    commit({ ...S, avaliacao: { ...av, abertas } }, true);
+  }
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.dataset.escala === undefined) return;
+  const av = S.avaliacao ?? AV0(), escalas = [...av.escalas];
+  escalas[+t.dataset.escala] = +t.value;
+  commit({ ...S, avaliacao: { ...av, escalas } });
+});
+
+// ---------- boot ----------
+const start = (data) => { if (data?.S) { S = data.S; ui = data.ui; } render(); };
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+window.claude?.hot?.snapshot?.(() => ({S, ui}));
+</script>
+
+</body></html>
